@@ -1,3 +1,5 @@
+using System.Drawing.Imaging;
+
 namespace Snip2Text
 {
     public partial class MainForm : Form
@@ -34,17 +36,47 @@ namespace Snip2Text
             {
                 if (m.WParam.ToInt32() == hotkeyId)
                 {
-                    MessageBox.Show("Hotkey pressed!");
+                    var screenshot = CaptureScreen();
+                    if (screenshot == null) return;
 
-                    // TODO: this will call StartSnipping()
+                    this.Hide();
+
+                    using (var snipForm = new SnippingForm(screenshot))
+                    {
+                        snipForm.ShowDialog();
+                    }
+
+                    this.Show();
+                    this.Hide();
                 }
             }
             base.WndProc(ref m);
         }
 
-        private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+        void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         {
             NativeMethods.UnregisterHotKey(this.Handle, hotkeyId);
+        }
+
+        Bitmap? CaptureScreen()
+        {
+            int minX = SystemInformation.VirtualScreen.Left;
+            int minY = SystemInformation.VirtualScreen.Top;
+            int width = SystemInformation.VirtualScreen.Width;
+            int height = SystemInformation.VirtualScreen.Height;
+
+            if (width == 0 || height == 0) return null;
+
+            //create buitmap to hold screenshot
+            var screenshot = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+
+            using (Graphics graphics = Graphics.FromImage(screenshot))
+            {
+                //copy screen contents into bitmap
+                graphics.CopyFromScreen(minX, minY, 0, 0, new Size(width, height), CopyPixelOperation.SourceCopy);
+            }
+
+            return screenshot;
         }
     }
 }
