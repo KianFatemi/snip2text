@@ -44,6 +44,10 @@
             Text = "SnippingForm";
             TopMost = true;
             WindowState = FormWindowState.Maximized;
+            Paint += SnippingForm_Paint;
+            MouseDown += SnippingForm_MouseDown;
+            MouseMove += SnippingForm_MouseMove;
+            MouseUp += SnippingForm_MouseUp;
             ResumeLayout(false);
         }
 
