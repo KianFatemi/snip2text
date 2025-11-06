@@ -1,4 +1,7 @@
+using System;
 using System.Drawing.Imaging;
+using System.Linq.Expressions;
+using Tesseract;
 
 namespace Snip2Text
 {
@@ -44,6 +47,18 @@ namespace Snip2Text
                     using (var snipForm = new SnippingForm(screenshot))
                     {
                         snipForm.ShowDialog();
+
+                        if (snipForm.SelectionRectangle.Width > 0 && snipForm.SelectionRectangle.Height > 0)
+                        {
+                            Bitmap croppedImage = CropImage(screenshot, snipForm.SelectionRectangle);
+                            string text = PerformOcr(croppedImage);
+
+                            if (!string.IsNullOrWhiteSpace(text))
+                            {
+                                Clipboard.SetText(text);
+                                notifyIcon1.ShowBalloonTip(2000, "Snip2Text", "Text copied to clipboard", ToolTipIcon.Info);
+                            }
+                        }
                     }
 
                     this.Show();
@@ -77,6 +92,41 @@ namespace Snip2Text
             }
 
             return screenshot;
+        }
+
+        Bitmap CropImage(Bitmap source, Rectangle selection)
+        {
+            Bitmap cropped = new Bitmap(selection.Width, selection.Height);
+
+            using (Graphics g = Graphics.FromImage(cropped))
+            {
+                g.DrawImage(source,
+                    new Rectangle(0, 0, cropped.Width, cropped.Height),
+                    selection, GraphicsUnit.Pixel);
+            }
+            return cropped;
+        }
+
+        string PerformOcr(Bitmap image)
+        {
+            try
+            {
+                using (var engine = new TesseractEngine(@"./tessdata", "eng", EngineMode.Default))
+                {
+                    using (var pixImage = PixConverter.ToPix(image))
+                    {
+                        using (var page = engine.Process(pixImage))
+                        {
+                            return page.GetText();
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                MessageBox.Show($"OCR Error: {e.Message}", "Error");
+                return string.Empty;
+            }
         }
     }
 }
